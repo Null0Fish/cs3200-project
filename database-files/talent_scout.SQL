@@ -221,7 +221,7 @@ CREATE TABLE recruiter_view
         ON DELETE CASCADE
 );
 
---INSERTS:
+
 INSERT INTO user (first_name, last_name, email, phone)
 VALUES ('Bethany', 'Smith', 'bsmith@email.com', null),
        ('Kevin', 'Fox', 'kfox@email.com', null),
