@@ -6,4 +6,4 @@ secrets/
 .env.local
 */logs/*
 .vscode/
-.venv
+.venv/
