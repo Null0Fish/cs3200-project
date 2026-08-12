@@ -67,13 +67,9 @@ def classification_nav():
 
 # ---- Role: administrator ----------------------------------------------------
 
-def admin_home_nav():
-    st.sidebar.page_link("pages/20_Admin_Home.py", label="System Admin", icon="🖥️")
-
-
-def ml_model_mgmt_nav():
+def create_announcement_nav():
     st.sidebar.page_link(
-        "pages/21_ML_Model_Mgmt.py", label="ML Model Management", icon="🏢"
+        "pages/21_Create_Announcement.py", label="Create Announcement", icon="📣"
     )
 
 
@@ -86,7 +82,7 @@ def SideBarLinks(show_home=False):
     """
 
     # Logo appears at the top of the sidebar on every page
-    st.sidebar.image("assets/logo.png", width=150)
+    st.sidebar.image("assets/logo_white.png", width=150)
 
     # If no one is logged in, send them to the Home (login) page
     if "authenticated" not in st.session_state:
@@ -112,8 +108,7 @@ def SideBarLinks(show_home=False):
             classification_nav()
 
         if st.session_state["role"] == "administrator":
-            admin_home_nav()
-            ml_model_mgmt_nav()
+            create_announcement_nav()
 
     # About link appears at the bottom for all roles
     about_page_nav()
