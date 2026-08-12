@@ -58,7 +58,7 @@ try:
             roster_lookup[roster_id] = roster
             roster_data.append(
                 {
-                    "Name": roster.get("name", "Roster"),
+                    "Name": roster.get("team_name", "Roster"),
                     "Division": roster.get("division", "N/A"),
                     "Gender": roster.get("gender", "N/A"),
                     "Views": len(views_response.json()),
@@ -75,7 +75,7 @@ try:
             button_col, = st.columns([1])
             with button_col:
                 if st.button(
-                    f"View {roster.get('name', 'Roster')}",
+                    f"View {roster.get('team_name', 'Roster')}",
                     key=f"view_roster_{roster_id}",
                     use_container_width=True,
                 ):

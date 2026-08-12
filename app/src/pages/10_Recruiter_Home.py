@@ -17,12 +17,12 @@ if st.button('View Profile',
              use_container_width=True):
     st.switch_page('pages/11_Recruiter_Profile.py')
 
-if st.button('View My Roster',
+if st.button('Add Roster',
              type='primary',
              use_container_width=True):
-    st.switch_page('pages/12_View_Roster.py')
+    st.switch_page('pages/12_Add_Roster.py')
 
-if st.button('Upload New Roster',
+if st.button('View Clips',
             type='primary',
             use_container_width=True):
-    st.switch_page('pages/13_Upload_Roster.py')
+    st.switch_page('pages/13_View_Clips.py')

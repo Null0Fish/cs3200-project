@@ -16,6 +16,7 @@ from backend.rosters.roster_routes import rosters
 from backend.recruiter_views.recruiter_view_routes import recruiter_views
 from backend.roster_views.roster_view_routes import roster_views
 from backend.opening.opening_routes import openings
+from backend.sports.sports_routes import sports
 
 
 
@@ -58,4 +59,5 @@ def create_app():
     app.register_blueprint(recruiter_views, url_prefix="/talent_scout")
     app.register_blueprint(roster_views, url_prefix="/talent_scout")
     app.register_blueprint(openings, url_prefix="/talent_scout")
+    app.register_blueprint(sports, url_prefix="/talent_scout")
     return app

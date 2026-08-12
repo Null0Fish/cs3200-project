@@ -40,7 +40,7 @@ def get_recruiter(recruiter_id: int):
                 roster.division,
                 roster.team_name,
                 sport.sport_id,
-                sport.name AS name
+                sport.name AS sport_name
             FROM roster
             JOIN sport ON roster.sport_id = sport.sport_id
             WHERE roster.user_id = %s
