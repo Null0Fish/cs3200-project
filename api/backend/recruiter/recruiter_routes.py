@@ -75,7 +75,7 @@ def get_recruiter(recruiter_id: int):
 
 @recruiter.route("/recruiter/<int:recruiter_id>", methods=["DELETE"])
 def delete_recruiter(recruiter_id: int):
-    current_app.logger.info("DELETE /roster/<recruiter_id> handler")
+    current_app.logger.info("DELETE /recruiter/<recruiter_id> handler")
     cursor = get_db().cursor(dictionary=True)
     
     if not isinstance(recruiter_id, int) or recruiter_id <= 0:

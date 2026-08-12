@@ -10,6 +10,7 @@ from backend.clips.clip_routes import clips
 from backend.announcements.announcement_routes import announcements
 from backend.roster.roster_routes import rosters
 from backend.recruiter.recruiter_routes import recruiter
+from backend.comment.comment_routes import comment
 
 
 def create_app():
@@ -45,4 +46,5 @@ def create_app():
     app.register_blueprint(announcements, url_prefix="/talent_scout")
     app.register_blueprint(rosters, url_prefix="/talent_scout")
     app.register_blueprint(recruiter, url_prefix="/talent_scout")
+    app.register_blueprint(comment, url_prefix="/talent_scout")
     return app
