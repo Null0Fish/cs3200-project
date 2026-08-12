@@ -5,13 +5,17 @@ import logging
 
 from backend.db_connection import init_app as init_db
 from backend.simple.simple_routes import simple_routes
-from backend.ngos.ngo_routes import ngos
 from backend.athletes.athlete_routes import athletes
 from backend.clips.clip_routes import clips
 from backend.announcements.announcement_routes import announcements
+from backend.roster.roster_routes import rosters
+from backend.recruiter.recruiter_routes import recruiter
+from backend.comment.comment_routes import comment
+from backend.personal_record.personal_record_routes import personal_record
 from backend.rosters.roster_routes import rosters
 from backend.recruiter_views.recruiter_view_routes import recruiter_views
 from backend.roster_views.roster_view_routes import roster_views
+
 
 
 def create_app():
@@ -42,11 +46,13 @@ def create_app():
     # and give a url prefix to each.
     app.logger.info("create_app(): registering blueprints")
     app.register_blueprint(simple_routes)
-    app.register_blueprint(ngos, url_prefix="/ngo")
     app.register_blueprint(athletes, url_prefix="/talent_scout")
     app.register_blueprint(clips, url_prefix="/talent_scout")
     app.register_blueprint(announcements, url_prefix="/talent_scout")
     app.register_blueprint(rosters, url_prefix="/talent_scout")
+    app.register_blueprint(recruiter, url_prefix="/talent_scout")
+    app.register_blueprint(comment, url_prefix="/talent_scout")
+    app.register_blueprint(personal_record, url_prefix="/talent_scout")
     app.register_blueprint(recruiter_views, url_prefix="/talent_scout")
     app.register_blueprint(roster_views, url_prefix="/talent_scout")
     return app
