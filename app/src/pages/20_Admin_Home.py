@@ -14,4 +14,4 @@ st.write('### What would you like to do today?')
 if st.button('Create Announcement',
              type='primary',
              use_container_width=True):
-    st.switch_page('pages/22_Create_Announcement.py')
+    st.switch_page('pages/21_Create_Announcement.py')

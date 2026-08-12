@@ -69,7 +69,7 @@ def classification_nav():
 
 def create_announcement_nav():
     st.sidebar.page_link(
-        "pages/22_Create_Announcement.py", label="Create Announcement", icon="📣"
+        "pages/21_Create_Announcement.py", label="Create Announcement", icon="📣"
     )
 
 
