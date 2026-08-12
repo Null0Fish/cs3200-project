@@ -11,6 +11,7 @@ from backend.announcements.announcement_routes import announcements
 from backend.roster.roster_routes import rosters
 from backend.recruiter.recruiter_routes import recruiter
 from backend.comment.comment_routes import comment
+from backend.personal_record.personal_record_routes import personal_record
 
 
 def create_app():
@@ -47,4 +48,5 @@ def create_app():
     app.register_blueprint(rosters, url_prefix="/talent_scout")
     app.register_blueprint(recruiter, url_prefix="/talent_scout")
     app.register_blueprint(comment, url_prefix="/talent_scout")
+    app.register_blueprint(personal_record, url_prefix="/talent_scout")
     return app
