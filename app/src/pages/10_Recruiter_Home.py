@@ -9,30 +9,20 @@ st.set_page_config(layout='wide')
 # Show appropriate sidebar links for the role of the currently logged in user
 SideBarLinks()
 
-st.title(f"Welcome USAID Worker, {st.session_state['first_name']}.")
-st.write('### What would you like to do today?')
+st.title(f"Welcome Valued Recruiter, {st.session_state['first_name']}.")
+st.write('### Ready to get scouting?')
 
-if st.button('View NGO Directory',
+if st.button('View Profile',
              type='primary',
              use_container_width=True):
-    st.switch_page('pages/14_NGO_Directory.py')
+    st.switch_page('pages/11_Recruiter_Profile.py')
 
-if st.button('Add New NGO',
+if st.button('Add Roster',
              type='primary',
              use_container_width=True):
-    st.switch_page('pages/15_Add_NGO.py')
+    st.switch_page('pages/12_Add_Roster.py')
 
-if st.button('Predict Value Based on Regression Model',
-             type='primary',
-             use_container_width=True):
-    st.switch_page('pages/11_Prediction.py')
-
-if st.button('View the Simple API Demo',
-             type='primary',
-             use_container_width=True):
-    st.switch_page('pages/12_API_Test.py')
-
-if st.button('View Classification Demo',
-             type='primary',
-             use_container_width=True):
-    st.switch_page('pages/13_Classification.py')
+if st.button('View Clips',
+            type='primary',
+            use_container_width=True):
+    st.switch_page('pages/13_View_Clips.py')
