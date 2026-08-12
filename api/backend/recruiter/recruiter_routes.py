@@ -1,12 +1,12 @@
-from flask import Blueprint, jsonify, current_app, redirect, url_for
+from flask import Blueprint, jsonify, current_app
 from backend.db_connection import get_db
 
 
-# This blueprint handles routes useful for interacting with rosters
+# This blueprint handles routes useful for interacting with recruiters
 recruiter = Blueprint("recruiter_routes", __name__)
 @recruiter.route("/recruiter/<int:recruiter_id>", methods=["GET"])
 def get_recruiter(recruiter_id: int):
-    current_app.logger.info("GET /roster/<recruiter_id> handler")
+    current_app.logger.info("GET /recruiter/<recruiter_id> handler")
     cursor = get_db().cursor(dictionary=True)
     
     if not isinstance(recruiter_id, int):
@@ -73,4 +73,35 @@ def get_recruiter(recruiter_id: int):
         cursor.close()
 
 
-
+@recruiter.route("/recruiter/<int:recruiter_id>", methods=["DELETE"])
+def delete_recruiter(recruiter_id: int):
+    current_app.logger.info("DELETE /roster/<recruiter_id> handler")
+    cursor = get_db().cursor(dictionary=True)
+    
+    if not isinstance(recruiter_id, int) or recruiter_id <= 0:
+        return jsonify({"error" : "ERROR cannot accept non-integer recruiter ID"}), 403
+    
+    try:
+        query = """
+            SELECT recruiter.user_id
+            FROM recruiter
+            WHERE recruiter.user_id = %s
+        """
+        cursor.execute(query, (recruiter_id,))
+        is_recruiter: bool = len(cursor.fetchall()) > 0
+        if not is_recruiter:
+            return jsonify({"error" : "Not a valid recruiter ID."}), 404       
+        
+        query = """
+            DELETE FROM user
+            WHERE user.user_id = %s;
+        """
+        cursor.execute(query, (recruiter_id,))
+        get_db().commit()
+        return jsonify({}), 204
+    except Exception as e:
+        current_app.logger.error(f'Database error in delete_recruiter: {e}')
+        return jsonify({"error": str(e)}), 500
+    finally:
+        cursor.close()
+        
