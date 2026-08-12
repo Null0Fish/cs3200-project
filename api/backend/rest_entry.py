@@ -8,7 +8,7 @@ from backend.simple.simple_routes import simple_routes
 from backend.athletes.athlete_routes import athletes
 from backend.clips.clip_routes import clips
 from backend.announcements.announcement_routes import announcements
-from backend.roster.roster_routes import rosters
+from backend.roster.roster_routes import rosters as roster_detail_routes
 from backend.recruiter.recruiter_routes import recruiter
 from backend.comment.comment_routes import comment
 from backend.personal_record.personal_record_routes import personal_record
@@ -50,6 +50,7 @@ def create_app():
     app.register_blueprint(athletes, url_prefix="/talent_scout")
     app.register_blueprint(clips, url_prefix="/talent_scout")
     app.register_blueprint(announcements, url_prefix="/talent_scout")
+    app.register_blueprint(roster_detail_routes, url_prefix="/talent_scout")
     app.register_blueprint(rosters, url_prefix="/talent_scout")
     app.register_blueprint(recruiter, url_prefix="/talent_scout")
     app.register_blueprint(comment, url_prefix="/talent_scout")
