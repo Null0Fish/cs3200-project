@@ -12,6 +12,10 @@ from backend.roster.roster_routes import rosters
 from backend.recruiter.recruiter_routes import recruiter
 from backend.comment.comment_routes import comment
 from backend.personal_record.personal_record_routes import personal_record
+from backend.rosters.roster_routes import rosters
+from backend.recruiter_views.recruiter_view_routes import recruiter_views
+from backend.roster_views.roster_view_routes import roster_views
+
 
 
 def create_app():
@@ -49,4 +53,6 @@ def create_app():
     app.register_blueprint(recruiter, url_prefix="/talent_scout")
     app.register_blueprint(comment, url_prefix="/talent_scout")
     app.register_blueprint(personal_record, url_prefix="/talent_scout")
+    app.register_blueprint(recruiter_views, url_prefix="/talent_scout")
+    app.register_blueprint(roster_views, url_prefix="/talent_scout")
     return app
