@@ -17,12 +17,12 @@ if st.button('View Profile',
              use_container_width=True):
     st.switch_page('pages/01_Athlete_Profile.py')
 
-if st.button('View Rosters',
+if st.button('View My Clips',
              type='primary',
              use_container_width=True):
-    st.switch_page('pages/02_View_Rosters.py')
+    st.switch_page('pages/02_My_Clips.py')
 
 if st.button('Upload New Clips',
-             type='primary',
-             use_container_width=True):
+            type='primary',
+            use_container_width=True):
     st.switch_page('pages/03_Upload_Clips.py')
