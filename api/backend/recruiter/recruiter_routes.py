@@ -34,9 +34,11 @@ def get_recruiter(recruiter_id: int):
 
         query = """
             SELECT
+                roster.roster_id,
                 roster.sport_id,
                 roster.gender,
                 roster.division,
+                roster.team_name,
                 sport.sport_id,
                 sport.name AS name
             FROM roster
