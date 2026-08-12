@@ -1,0 +1,52 @@
+from flask import Blueprint, jsonify, current_app, request
+from backend.db_connection import get_db
+
+
+# This blueprint handles routes useful for interacting with rosters
+openings = Blueprint("opening_routes", __name__)
+@openings.route("/opening", methods=["POST"])
+def create_opening():
+    current_app.logger.info("POST /opening/")
+    cursor = get_db().cursor(dictionary=True)
+
+    # cursor.execute(query, params)
+    try:
+        data = request.get_json()
+        if "roster_id" not in data:
+            return jsonify({"error" : "roster_id is a required field"}), 400
+        query = """
+            SELECT roster.roster_id, MAX(opening.opening_number) AS last_id
+            FROM roster
+            LEFT OUTER JOIN opening ON opening.roster_id = roster.roster_id
+            WHERE roster.roster_id = %s
+            GROUP BY roster.roster_id
+        """
+        cursor.execute(query, (data["roster_id"],))
+        last_opening = cursor.fetchone()
+        if not last_opening.get("roster_id"):
+            return jsonify({"error" : "not a valid roster_id"}), 400
+        
+        last_row_id = last_opening["last_id"] + 1 if last_opening["last_id"] is not None else 1
+        
+        query = """
+            INSERT INTO opening (opening_number, roster_id, required_gpa, required_height_cm, position, grad_year)
+            VALUES (%s, %s, %s, %s, %s, %s)
+        """
+        cursor.execute(query, (
+            last_row_id,
+            data["roster_id"],
+            data.get("required_gpa"),
+            data.get("required_height_cm"),
+            data.get("position"),
+            data.get("grad_year")
+        ))
+        get_db().commit()
+        return jsonify({"message": "Opening created successfully", "opening_id": last_row_id}), 201
+    except Exception as e:
+        current_app.logger.error(f'Database error in create_opening: {e}')
+        return jsonify({"error": str(e)}), 500
+    finally:
+        cursor.close()
+
+
+
