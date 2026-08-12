@@ -4,6 +4,60 @@ from backend.db_connection import get_db
 
 # This blueprint handles routes useful for interacting with rosters
 openings = Blueprint("opening_routes", __name__)
+@openings.route("/opening", methods=["GET"])
+def get_openings():
+    cursor = get_db().cursor(dictionary=True)
+    try:
+        current_app.logger.info("GET /talent_scout/opening")
+        query = """
+            SELECT
+                opening.opening_number,
+                opening.roster_id,
+                opening.required_gpa,
+                opening.required_height_cm,
+                opening.position,
+                opening.grad_year,
+                roster.user_id AS recruiter_id,
+                roster.division,
+                roster.start_date,
+                roster.end_date,
+                roster.gender,
+                roster.team_name,
+                sport.name AS sport_name
+            FROM opening
+            JOIN roster ON roster.roster_id = opening.roster_id
+            LEFT OUTER JOIN sport ON sport.sport_id = roster.sport_id
+        """
+
+        # Optional filters supplied as query string parameters
+        filters: list[str] = []
+        params: list[str] = []
+        for param, column in (
+            ("roster_id", "opening.roster_id"),
+            ("position", "opening.position"),
+            ("grad_year", "opening.grad_year"),
+            ("sport_id", "roster.sport_id"),
+            ("recruiter_id", "roster.user_id"),
+        ):
+            value = request.args.get(param)
+            if value is not None:
+                filters.append(f"{column} = %s")
+                params.append(value)
+
+        if filters:
+            query += " WHERE " + " AND ".join(filters)
+
+        query += " ORDER BY opening.roster_id, opening.opening_number"
+
+        cursor.execute(query, tuple(params))
+        return jsonify(cursor.fetchall()), 200
+    except Exception as e:
+        current_app.logger.error(f"Database error in get_openings: {e}")
+        return jsonify({"error": str(e)}), 500
+    finally:
+        cursor.close()
+
+
 @openings.route("/opening", methods=["POST"])
 def create_opening():
     current_app.logger.info("POST /opening/")
