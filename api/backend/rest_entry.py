@@ -11,6 +11,7 @@ from backend.recruiting.recruiting_routes import recruiting
 from backend.engagement.engagement_routes import engagement
 from backend.admin.admin_routes import admin
 from backend.analytics.analytics_routes import analytics
+from backend.assets.asset_routes import assets
 
 
 def create_app():
@@ -49,9 +50,11 @@ def create_app():
     #   analytics  - read-only aggregate and de-identified data for analysts
     #
     # simple_routes is the template's demo/health-check blueprint and stays at
-    # the root (/, /data, /niceMessage, ...).
+    # the root (/, /data, /niceMessage, ...), as does assets, which serves clip
+    # video files from /assets/clips rather than a slice of the data model.
     app.logger.info("create_app(): registering blueprints")
     app.register_blueprint(simple_routes)
+    app.register_blueprint(assets)
     app.register_blueprint(athletes, url_prefix="/talent_scout")
     app.register_blueprint(clips, url_prefix="/talent_scout")
     app.register_blueprint(recruiting, url_prefix="/talent_scout")

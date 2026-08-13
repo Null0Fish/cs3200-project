@@ -59,8 +59,20 @@ def admin_home_nav():
 
 def create_announcement_nav():
     st.sidebar.page_link(
-        "pages/21_Create_Announcement.py", label="Create Announcement", icon="📣"
+        "pages/21_Create_Announcement.py", label="Announcements", icon="📣"
     )
+
+
+def moderation_feed_nav():
+    st.sidebar.page_link("pages/22_Moderation_Feed.py", label="Moderation Feed", icon="🚩")
+
+
+def manage_accounts_nav():
+    st.sidebar.page_link("pages/23_Manage_Accounts.py", label="Manage Accounts", icon="👥")
+
+
+def manage_rosters_nav():
+    st.sidebar.page_link("pages/25_Manage_Rosters.py", label="Manage Rosters", icon="📋")
 
 
 # ---- Sidebar assembly -------------------------------------------------------
@@ -96,8 +108,13 @@ def SideBarLinks(show_home=False):
             add_roster_nav()
             view_clips_nav()
 
+        # pages/24_Account_Detail.py has no link: it is reached from the account
+        # list and the moderation feed, which hand it a selected_user_id.
         if st.session_state["role"] == "administrator":
             admin_home_nav()
+            moderation_feed_nav()
+            manage_accounts_nav()
+            manage_rosters_nav()
             create_announcement_nav()
 
     # About link appears at the bottom for all roles

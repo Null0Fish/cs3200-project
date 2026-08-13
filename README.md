@@ -54,10 +54,14 @@ app/                    Streamlit front end
   src/Home.py           Persona picker (the mock "login" screen)
   src/pages/            One file per screen, numbered by persona
   src/modules/nav.py    Role-based sidebar navigation
+  src/modules/api.py    Shared API request/flash-message helpers
+  src/modules/clips.py  Building a clip's <video> element
+  src/modules/moderation.py  Admin-only page guard and two-click delete
 api/                    Flask REST API
   backend/rest_entry.py create_app(): config, DB hook, blueprint registration
   backend/<domain>/     One blueprint per domain (see below)
   backend/db_connection/ Per-request MySQL connection
+  assets/clips/         Clip video files, served from /assets/clips
 database-files/         talent_scout.sql — schema + seed data, run on first DB start
 docs/                   Design document and course setup guides
 datasets/, ml-src/      Empty placeholders from the course template
@@ -117,6 +121,7 @@ part of the schema.
 | PUT | `/clip/<id>` | Edit a caption |
 | DELETE | `/clip/<id>` | Remove a clip (comments cascade) |
 | GET | `/clip/<id>/comment` | Just the comment thread |
+| GET | `/comment` | Every comment on the platform; filters `clip_id`, `user_id` |
 | POST | `/comment` | Comment on a clip |
 | PUT | `/comment/<id>` | Edit a comment body |
 | DELETE | `/comment/<id>` | Remove a comment |
@@ -131,7 +136,7 @@ roster, opening)
 | DELETE | `/recruiter/<id>` | Delete a recruiter account |
 | GET | `/university` | Universities with recruiter counts |
 | GET | `/sports` | Sport catalog for dropdowns |
-| GET | `/roster` | All rosters; filters `recruiter_id`, `sport_id`, `division`, `gender` |
+| GET | `/roster` | All rosters with the posting recruiter and their university; filters `recruiter_id`, `sport_id`, `division`, `gender` |
 | POST | `/roster` | Post a roster |
 | GET | `/roster/<id>` | One roster with its openings nested |
 | DELETE | `/roster/<id>` | Take a roster down |
@@ -160,7 +165,7 @@ roster, opening)
 | PUT | `/announcement/<id>` | Reword or reschedule |
 | DELETE | `/announcement/<id>` | Pull an announcement down |
 | GET | `/user` | Every account with its derived role; filter `role` |
-| GET | `/user/<id>` | One account with clip/comment/roster counts |
+| GET | `/user/<id>` | One account with its role and clip/comment/roster counts |
 | DELETE | `/user/<id>` | Delete any account regardless of role |
 
 **`analytics`** — `api/backend/analytics/analytics_routes.py` (read-only, de-identified)
@@ -176,6 +181,31 @@ roster, opening)
 The course template's demo blueprint (`api/backend/simple/simple_routes.py`) is still mounted
 at the root and is the quickest way to confirm the API container is alive without involving
 MySQL: `/`, `/data`, `/niceMessage`, `/message`, `/playlist`.
+
+### Clip videos
+
+`clip.clip_url` holds the name of a clip's video file, stored **with a leading slash**, and
+`api/backend/assets/asset_routes.py` serves those files:
+
+| Method | Route | Purpose |
+|---|---|---|
+| GET | `/assets/clips/<filename>` | One clip's video file, from `api/assets/clips` |
+
+This is the only route not mounted under `/talent_scout` — these are files, not resources in
+the data model — and the only URL the *browser* requests directly, so it uses the API's
+published host port (`http://localhost:4000`) rather than the `web-api` Docker hostname the
+Streamlit pages call. Set `CLIP_ASSET_BASE_URL` on the app container to override that.
+
+A clip whose `clip_url` is set renders as an HTML `<video>` element pointing at
+`http://localhost:4000/assets/clips/<filename>`; a clip whose `clip_url` is NULL has no video
+attached and renders without a player, which every page showing clips has to handle. The
+athlete names the file when uploading a clip and can change it later from **My Clips** — the
+file itself is placed in `api/assets/clips` rather than uploaded through the app. See
+[api/assets/clips/README.md](api/assets/clips/README.md).
+
+`clip_url` is a column on `clip`, so a database created before it was added has to be
+re-seeded — `docker compose down db -v && docker compose up db -d` — or every clip request
+fails with `Unknown column 'c.clip_url'`.
 
 ### Conventions used by every route
 

@@ -172,8 +172,11 @@ def get_sports():
 # Rosters
 # ---------------------------------------------------------------------------
 
-# Get all rosters (1.4 - athletes see what programs are recruiting)
-# Optional filters: recruiter_id, sport_id, division, gender.
+# Get all rosters (1.4 - athletes see what programs are recruiting, 3.4 - the
+# admin's list of roster postings to check for false ones)
+# The posting recruiter and their university come back with each row because a
+# roster on its own gives an admin nothing to judge its integrity by. Optional
+# filters: recruiter_id, sport_id, division, gender.
 # Example: /talent_scout/roster?sport_id=1&division=D1
 @recruiting.route("/roster", methods=["GET"])
 def get_rosters():
@@ -183,9 +186,17 @@ def get_rosters():
         query = """
             SELECT r.roster_id, r.user_id AS recruiter_id, r.sport_id,
                    s.name AS sport_name, r.division, r.start_date, r.end_date,
-                   r.gender, r.team_name
+                   r.gender, r.team_name,
+                   u.first_name AS recruiter_first_name,
+                   u.last_name AS recruiter_last_name,
+                   uni.name AS university_name,
+                   (SELECT COUNT(*) FROM opening o
+                    WHERE o.roster_id = r.roster_id) AS opening_count
             FROM roster r
                 JOIN sport s ON r.sport_id = s.sport_id
+                LEFT JOIN recruiter rec ON rec.user_id = r.user_id
+                LEFT JOIN user u ON u.user_id = r.user_id
+                LEFT JOIN university uni ON uni.university_id = rec.university_id
             WHERE 1=1
         """
         params = []

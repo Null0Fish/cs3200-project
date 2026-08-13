@@ -1,0 +1,4 @@
+# Clip videos are local test media, not part of the repository.
+*
+!.gitignore
+!README.md

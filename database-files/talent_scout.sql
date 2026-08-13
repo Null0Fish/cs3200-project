@@ -167,6 +167,10 @@ CREATE TABLE clip
     user_id   INT,
     posted_at DATE     NOT NULL,
     caption   TINYTEXT NOT NULL,
+    -- Video file for this clip, stored with a leading slash and served by the
+    -- API from /assets/clips (see api/assets/clips/README.md). NULL means the
+    -- athlete created the clip entry but never attached a video.
+    clip_url  VARCHAR(255),
     PRIMARY KEY (clip_id),
     FOREIGN KEY (user_id) REFERENCES athlete (user_id)
         ON UPDATE CASCADE
@@ -277,9 +281,11 @@ INSERT INTO personal_record (user_id, date, event_id, time, score)
 VALUES (1, '2028-08-02', 1, '00:00:30.50', NULL),
        (1, '2028-08-01', 2, '00:00:28.50', NULL);
 
-INSERT INTO clip (user_id, posted_at, caption)
-VALUES (1, '2028-08-01', 'Super cool clip'),
-       (1, '2028-08-02', 'Other cool clip');
+-- The second clip is seeded with a NULL clip_url on purpose: the app has to
+-- cope with clip rows that have no video file attached.
+INSERT INTO clip (user_id, posted_at, caption, clip_url)
+VALUES (1, '2028-08-01', 'Super cool clip', '/super_cool_clip.mp4'),
+       (1, '2028-08-02', 'Other cool clip', NULL);
 
 INSERT INTO comment (clip_id, user_id, posted_at, content)
 VALUES (1, 2, '2028-07-01', 'Good stuff'),

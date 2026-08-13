@@ -1,5 +1,6 @@
 import streamlit as st
 import requests
+from modules.clips import normalize_clip_url, render_clip_video
 from modules.nav import SideBarLinks
 
 st.set_page_config(layout='wide')
@@ -30,23 +31,36 @@ try:
 
                 with st.expander(f"{clip['caption']} — posted {clip['posted_at']}"):
 
+                    render_clip_video(clip)
+
                     # Story 1.3 - the "edit" link under each clip in Wireframe 2
                     new_caption = st.text_input(
                         "Caption",
                         value=clip["caption"],
                         key=f"caption_{clip_id}",
                     )
+                    # Clearing this field detaches the video from the clip; the
+                    # clip and its comments stay.
+                    new_clip_file = st.text_input(
+                        "Video file name",
+                        value=(clip.get("clip_url") or "").lstrip("/"),
+                        placeholder="dash_highlight.mp4",
+                        key=f"clip_url_{clip_id}",
+                    )
 
                     col1, col2 = st.columns(2)
 
                     with col1:
-                        if st.button("Save Caption", key=f"save_{clip_id}"):
+                        if st.button("Save Changes", key=f"save_{clip_id}"):
                             put_response = requests.put(
                                 f"{API_URL}/{clip_id}",
-                                json={"caption": new_caption},
+                                json={
+                                    "caption": new_caption,
+                                    "clip_url": normalize_clip_url(new_clip_file),
+                                },
                             )
                             if put_response.status_code == 200:
-                                st.success("Caption updated")
+                                st.success("Clip updated")
                                 st.rerun()
                             else:
                                 st.error(

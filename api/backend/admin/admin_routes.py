@@ -218,8 +218,10 @@ def get_users():
         cursor.close()
 
 
-# Get one account, with a count of the content attached to it (3.1, 3.3)
-# The counts are what an admin looks at before deciding to delete an account.
+# Get one account, with its role and a count of the content attached to it (3.1, 3.3)
+# The counts are what an admin looks at before deciding to delete an account, and
+# the role decides which of the account views the frontend shows - an athlete's
+# metrics and clips, or a recruiter's university and rosters.
 # Example: /talent_scout/user/1
 @admin.route("/user/<int:user_id>", methods=["GET"])
 def get_user(user_id):
@@ -227,8 +229,19 @@ def get_user(user_id):
     try:
         current_app.logger.info(f'GET /talent_scout/user/{user_id}')
         cursor.execute("""
-            SELECT u.user_id, u.first_name, u.last_name, u.email, u.phone
+            SELECT u.user_id, u.first_name, u.last_name, u.email, u.phone,
+                   CASE
+                       WHEN ath.user_id IS NOT NULL THEN 'athlete'
+                       WHEN rec.user_id IS NOT NULL THEN 'recruiter'
+                       WHEN adm.user_id IS NOT NULL THEN 'administrator'
+                       WHEN ana.user_id IS NOT NULL THEN 'analyst'
+                       ELSE 'unassigned'
+                   END AS role
             FROM user u
+                LEFT JOIN athlete ath ON ath.user_id = u.user_id
+                LEFT JOIN recruiter rec ON rec.user_id = u.user_id
+                LEFT JOIN administrator adm ON adm.user_id = u.user_id
+                LEFT JOIN analyst ana ON ana.user_id = u.user_id
             WHERE u.user_id = %s
         """, (user_id,))
         user = cursor.fetchone()
