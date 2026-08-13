@@ -7,3 +7,7 @@ secrets/
 */logs/*
 .vscode/
 .venv/
+
+# Uploaded clip videos. They land here because docker-compose.yaml bind-mounts
+# ./api into the API container; they are user content, not source.
+api/clip-files/

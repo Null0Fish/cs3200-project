@@ -4,16 +4,51 @@ Clips blueprint: the content side of the platform.
 Covers highlight clips and the comments left on them — comments have no meaning
 apart from the clip they belong to, so both resources live together here.
 
+Two blueprints come out of this file. `clips` holds the JSON API and is mounted
+under /talent_scout with everything else. `clip_files` holds the single route
+that streams a video file, and is mounted at the root so the URL stays short
+enough to drop straight into a page: <video src="/clips/12">. See
+clip_storage.py for how those files are named and stored.
+
 Registered in rest_entry.py with:
     app.register_blueprint(clips, url_prefix='/talent_scout')
+    app.register_blueprint(clip_files)
 """
 import datetime
 
-from flask import Blueprint, jsonify, request, current_app
+from flask import Blueprint, jsonify, request, current_app, send_file
 from backend.db_connection import get_db
+from backend.clips.clip_storage import (
+    clip_ids_with_video,
+    delete_clip_file,
+    find_clip_file,
+    save_clip_file,
+)
 from mysql.connector import Error
 
 clips = Blueprint("clips", __name__)
+clip_files = Blueprint("clip_files", __name__)
+
+
+# ---------------------------------------------------------------------------
+# Clip video files
+# ---------------------------------------------------------------------------
+
+# Stream a clip's video to the browser (2.1, 3.1)
+# This is the URL a <video> element points at. It is the whole reason clip
+# videos are stored as files: the page already knows the clip_id, so it can
+# build the src without a round trip to ask where the video lives.
+# Example: GET /clips/1
+@clip_files.route("/clips/<int:clip_id>", methods=["GET"])
+def serve_clip_video(clip_id):
+    path = find_clip_file(clip_id)
+    if path is None:
+        current_app.logger.info(f'GET /clips/{clip_id} - no video on disk')
+        return jsonify({"error": "No video uploaded for this clip"}), 404
+    # conditional=True is what makes send_file answer HTTP Range requests.
+    # Without it the browser has to download the whole file before it can play,
+    # and dragging the scrubber does nothing.
+    return send_file(path, conditional=True)
 
 
 # ---------------------------------------------------------------------------
@@ -49,6 +84,11 @@ def get_clips():
         query += " ORDER BY c.posted_at DESC"
         cursor.execute(query, params)
         clip_list = cursor.fetchall()
+        # has_video tells the frontend whether to render a player or a
+        # placeholder, so it never points a <video> at a URL that 404s.
+        with_video = clip_ids_with_video()
+        for clip in clip_list:
+            clip["has_video"] = clip["clip_id"] in with_video
         current_app.logger.info(f'Retrieved {len(clip_list)} clips')
         return jsonify(clip_list), 200
     except Error as e:
@@ -81,6 +121,7 @@ def get_clip(clip_id):
         clip = cursor.fetchone()
         if not clip:
             return jsonify({"error": "Clip not found"}), 404
+        clip["has_video"] = find_clip_file(clip_id) is not None
         # Reuse the same cursor for the follow-up query
         cursor.execute("""
             SELECT cm.comment_id, cm.content, cm.posted_at,
@@ -103,12 +144,20 @@ def get_clip(clip_id):
 # Required fields: user_id, caption. posted_at defaults to today if omitted, and
 # clip_url is optional - a clip with no video file attached is still a valid row.
 # clip.user_id is a foreign key to athlete, so recruiters and admins cannot post.
-# Example: POST /talent_scout/clip with JSON body
+
+# Send the video as a multipart form with the file under `video` and the text
+# fields alongside it; a plain JSON body still works and creates a clip with no
+# video, which can be filled in later via PUT /clip/<id>/video.
+# The file is only named once the row exists, because it is named after the
+# clip_id the insert hands back.
+# Example: POST /talent_scout/clip with files={'video': ...}, data={...}
 @clips.route("/clip", methods=["POST"])
 def upload_clip():
     cursor = get_db().cursor(dictionary=True)
     try:
-        data = request.get_json()
+        # A request carrying a file is multipart, so its text fields arrive in
+        # request.form rather than as JSON.
+        data = request.form if request.files else (request.get_json() or {})
         current_app.logger.info('POST /talent_scout/clip')
         required_fields = ["user_id", "caption"]
         for field in required_fields:
@@ -120,12 +169,26 @@ def upload_clip():
         """
         cursor.execute(query, (
             data["user_id"],
-            data.get("posted_at"),
+            # A form field left blank comes through as "" rather than absent,
+            # and COALESCE only falls back to CURDATE() on a real NULL.
+            data.get("posted_at") or None,
             data["caption"],
             data.get("clip_url"),
         ))
+        clip_id = cursor.lastrowid
+
+        video = request.files.get("video")
+        if video and video.filename:
+            try:
+                save_clip_file(clip_id, video)
+            except ValueError as e:
+                # A clip whose video was rejected is a row nobody can watch, so
+                # drop it rather than leave it in the feed as a dead entry.
+                get_db().rollback()
+                return jsonify({"error": str(e)}), 400
+
         get_db().commit()
-        return jsonify({"message": "Clip created successfully", "clip_id": cursor.lastrowid}), 201
+        return jsonify({"message": "Clip created successfully", "clip_id": clip_id}), 201
     except Error as e:
         current_app.logger.error(f'Database error in upload_clip: {e}')
         return jsonify({"error": str(e)}), 500
@@ -133,8 +196,38 @@ def upload_clip():
         cursor.close()
 
 
-# Edit a clip's caption or attached video (1.3 - the "edit" link under each clip
-# in Wireframe 2). user_id and clip_id are fixed.
+# Attach or replace the video on a clip that already exists (1.3)
+# Lets an athlete swap in a better cut without losing the clip's comments, and
+# gives the seeded clips a way to get a video at all.
+# Example: PUT /talent_scout/clip/1/video with files={'video': ...}
+@clips.route("/clip/<int:clip_id>/video", methods=["PUT"])
+def upload_clip_video(clip_id):
+    cursor = get_db().cursor(dictionary=True)
+    try:
+        current_app.logger.info(f'PUT /talent_scout/clip/{clip_id}/video')
+        cursor.execute("SELECT clip_id FROM clip WHERE clip_id = %s", (clip_id,))
+        if not cursor.fetchone():
+            return jsonify({"error": "Clip not found"}), 404
+
+        video = request.files.get("video")
+        if not video or not video.filename:
+            return jsonify({"error": "video is a required file field"}), 400
+
+        try:
+            save_clip_file(clip_id, video)
+        except ValueError as e:
+            return jsonify({"error": str(e)}), 400
+
+        return jsonify({"message": "Clip video uploaded successfully"}), 200
+    except Error as e:
+        current_app.logger.error(f'Database error in upload_clip_video: {e}')
+        return jsonify({"error": str(e)}), 500
+    finally:
+        cursor.close()
+
+
+# Edit a clip's caption (1.3 - the "edit" link under each clip in Wireframe 2)
+# Only the caption is editable; user_id and clip_id are fixed.
 # Example: PUT /talent_scout/clip/1 with JSON body containing caption
 @clips.route("/clip/<int:clip_id>", methods=["PUT"])
 def update_clip(clip_id):
@@ -176,6 +269,10 @@ def delete_clip(clip_id):
             return jsonify({"error": "Clip not found"}), 404
         cursor.execute("DELETE FROM clip WHERE clip_id = %s", (clip_id,))
         get_db().commit()
+        # The row is gone, so nothing would ever ask for the file again. Take
+        # it with the row rather than leaving it orphaned on disk — clip_ids
+        # are never reused, so a leftover file is dead weight forever.
+        delete_clip_file(clip_id)
         return jsonify({"message": "Clip deleted successfully"}), 200
     except Error as e:
         current_app.logger.error(f'Database error in delete_clip: {e}')
