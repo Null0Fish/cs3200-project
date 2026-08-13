@@ -6,7 +6,8 @@ import logging
 from backend.db_connection import init_app as init_db
 from backend.simple.simple_routes import simple_routes
 from backend.athletes.athlete_routes import athletes
-from backend.clips.clip_routes import clips
+from backend.clips.clip_routes import clips, clip_files
+from backend.clips.clip_storage import MAX_CLIP_BYTES
 from backend.recruiting.recruiting_routes import recruiting
 from backend.engagement.engagement_routes import engagement
 from backend.admin.admin_routes import admin
@@ -25,6 +26,11 @@ def create_app():
 
     # Secret key used by Flask for securely signing session cookies.
     app.config["SECRET_KEY"] = os.getenv("SECRET_KEY")
+
+    # Cap on any request body, which in practice means clip video uploads.
+    # Flask rejects anything larger with a 413 before it reaches a route, so a
+    # huge upload never gets written to disk.
+    app.config["MAX_CONTENT_LENGTH"] = MAX_CLIP_BYTES
 
     # Database connection settings — values come from the .env file.
     app.config["MYSQL_DATABASE_USER"] = os.getenv("DB_USER").strip()
@@ -49,9 +55,12 @@ def create_app():
     #   analytics  - read-only aggregate and de-identified data for analysts
     #
     # simple_routes is the template's demo/health-check blueprint and stays at
-    # the root (/, /data, /niceMessage, ...).
+    # the root (/, /data, /niceMessage, ...). clip_files also stays at the root
+    # so clip videos are served from /clips/<clip_id>, short enough to use
+    # directly as a <video> src.
     app.logger.info("create_app(): registering blueprints")
     app.register_blueprint(simple_routes)
+    app.register_blueprint(clip_files)
     app.register_blueprint(athletes, url_prefix="/talent_scout")
     app.register_blueprint(clips, url_prefix="/talent_scout")
     app.register_blueprint(recruiting, url_prefix="/talent_scout")

@@ -1,6 +1,7 @@
 import streamlit as st
 import requests
 from modules.nav import SideBarLinks
+from modules.clips import CLIP_API_URL, show_clip_video
 
 st.set_page_config(layout='wide')
 
@@ -9,8 +10,11 @@ SideBarLinks()
 # set up the page
 st.title("My Clips")
 
-API_URL = "http://web-api:4000/talent_scout/clip"
+API_URL = CLIP_API_URL
 user_id = st.session_state['user_id']
+
+# Matches the extensions the API is willing to store (see clip_storage.py).
+VIDEO_TYPES = ["mp4", "webm", "ogg", "mov", "m4v"]
 
 
 
@@ -29,6 +33,8 @@ try:
                 clip_id = clip["clip_id"]
 
                 with st.expander(f"{clip['caption']} — posted {clip['posted_at']}"):
+
+                    show_clip_video(clip)
 
                     # Story 1.3 - the "edit" link under each clip in Wireframe 2
                     new_caption = st.text_input(
@@ -63,6 +69,33 @@ try:
                                 st.error(
                                     f"Failed to delete: {delete_response.json().get('error', 'Unknown error')}"
                                 )
+
+                    # Swapping the video keeps the clip_id, so the caption and
+                    # any comments the clip has collected survive the change.
+                    label = "Replace video" if clip["has_video"] else "Add a video"
+                    new_video = st.file_uploader(
+                        label, type=VIDEO_TYPES, key=f"video_{clip_id}"
+                    )
+                    if new_video is not None and st.button(
+                        "Upload Video", key=f"upload_video_{clip_id}"
+                    ):
+                        video_response = requests.put(
+                            f"{API_URL}/{clip_id}/video",
+                            files={
+                                "video": (
+                                    new_video.name,
+                                    new_video.getvalue(),
+                                    new_video.type,
+                                )
+                            },
+                        )
+                        if video_response.status_code == 200:
+                            st.success("Video uploaded")
+                            st.rerun()
+                        else:
+                            st.error(
+                                f"Failed to upload video: {video_response.json().get('error', 'Unknown error')}"
+                            )
     else:
         st.error(
             f"Failed to fetch clips: {response.json().get('error', 'Unknown error')}"

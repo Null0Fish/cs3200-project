@@ -112,14 +112,23 @@ part of the schema.
 | Method | Route | Purpose |
 |---|---|---|
 | GET | `/clip` | The feed; filter `athlete_id` |
-| POST | `/clip` | Upload a clip |
+| POST | `/clip` | Upload a clip, with the video as multipart field `video` |
 | GET | `/clip/<id>` | One clip with the poster's metrics and its comments |
 | PUT | `/clip/<id>` | Edit a caption |
-| DELETE | `/clip/<id>` | Remove a clip (comments cascade) |
+| PUT | `/clip/<id>/video` | Attach or replace the clip's video file |
+| DELETE | `/clip/<id>` | Remove a clip and its video (comments cascade) |
 | GET | `/clip/<id>/comment` | Just the comment thread |
 | POST | `/comment` | Comment on a clip |
 | PUT | `/comment/<id>` | Edit a comment body |
 | DELETE | `/comment/<id>` | Remove a comment |
+
+Clip videos are the one thing that doesn't live in MySQL. A clip's video is
+written to disk as `<clip_id>` plus its original extension and served from
+`GET /clips/<clip_id>` — the one route mounted outside `/talent_scout`, so a
+page can build `<video src="/clips/12">` from a clip_id it already has without
+storing a URL or streaming a BLOB back through the database. `GET /clip` and
+`GET /clip/<id>` include a `has_video` flag so the frontend knows whether to
+draw a player. See `api/backend/clips/clip_storage.py`.
 
 **`recruiting`** — `api/backend/recruiting/recruiting_routes.py` (recruiter, university, sport,
 roster, opening)
