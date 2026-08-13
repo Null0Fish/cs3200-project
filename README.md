@@ -1,70 +1,210 @@
-# Summer B 2026 CS 3200 Project Template
+# TalentScout
 
-This is a template repo for Dr. Fontenot's Summer B 2026 CS 3200 Course Project.
+**Team Purplicious — CS 3200, Summer B 2026**
 
-It includes most of the infrastructure setup (containers), sample databases, and example UI pages. Explore it fully and ask questions!
+TalentScout is a bidirectional recruiting platform for high school athletes and college
+recruiters. Too many promising athletes go unnoticed because they don't know how to market
+themselves, don't live where scouts travel, and can't afford a $2,000 recruiting service.
+TalentScout replaces that with data: athletes publish their metrics, personal records, and
+highlight clips, and recruiters publish the rosters and openings they actually need to fill.
+Both sides can see who has been looking at them.
 
-## Prerequisites
+Key features:
 
-See [docs/PreReq.md](docs/PreReq.md) for full setup instructions, including Python environment setup with Anaconda/Miniconda or the standard Python virtual environment tool, required tools, and IDE configuration.
+- **Athlete profiles** with GPA, height/weight, graduation year, recruitment status, personal
+  record history, and highlight clips.
+- **A recruiter clip feed** with athlete metrics one tap away, plus filtered athlete search on
+  GPA, height, graduation year, and status.
+- **Roster openings** so athletes can see which programs match their numbers, and recruiters
+  can see which athletes are looking at their rosters.
+- **View tracking** in both directions — the coaches who viewed an athlete, and the athletes
+  who viewed a roster.
+- **Aggregate, de-identified analytics** for researchers studying high school athletics.
 
-A full index of the project documentation is in [docs/README.md](docs/README.md).
+## Personas
 
-## Structure of the Repo
+| Persona | Who they are | What they do in the app |
+|---|---|---|
+| **Bethany** — High School Athlete | Sophomore hurdler in a region scouts rarely visit | Maintains her profile and PRs, uploads clips, checks which programs match her numbers and which coaches viewed her |
+| **Kevin** — College Recruiter | Football recruiter whose travel budget was cut | Posts rosters and openings, scrolls the clip feed, queries athletes by metric, sees who viewed his rosters |
+| **Jonathan** — Administrator | Moderates content and supports accounts | Reads an unfiltered feed, deletes clips, comments, rosters, and accounts, posts platform announcements |
+| **Lori** — Data Analyst | Master's researcher studying young-adult athletics | Pulls aggregate metrics, filters by gender/sport/class year, exports de-identified rows |
 
-- This repository is organized into six main directories:
-  - `./app` - the Streamlit app
-  - `./api` - the Flask REST API
-  - `./database-files` - SQL scripts to initialize the MySQL database
-  - `./datasets` - folder for storing datasets
-  - `./ml-src` - folder for ML model development (Jupyter notebooks, training scripts)
-  - `./docs` - project documentation
+The design document — personas, user stories, ER diagrams, and the SQL behind each user
+story — is in [docs/TalentScout.md](docs/TalentScout.md).
 
-- The repo also contains a `docker-compose.yaml` file that is used to set up the Docker containers for the front end app, the REST API, and MySQL database.
+## Architecture
 
-## Suggestion for Learning the Project Code Base
+Three Docker containers, defined in `docker-compose.yaml`:
 
-If you are not familiar with web app development, this code base might be confusing. But don't worry, we'll get through it together. Here are some suggestions for learning the code base:
+| Container | Stack | Port | Source |
+|---|---|---|---|
+| `web-app` | Streamlit | 8501 | `./app` |
+| `web-api` | Flask REST API | 4000 | `./api` |
+| `mysql_db` | MySQL 9 | 3200 (host) → 3306 | `./database-files` |
 
-1. Start by exploring the `./app` directory. This is where the Streamlit app is located. The Streamlit app is a Python-based web app that is used to interact with the user. It's a great way to build a simple web app without having to learn a lot of web development.
-1. Next, explore the `./api` directory. This is where the Flask REST API is located. The REST API is used to interact with the database and perform other server-side tasks. You might also consider this the "application logic" or "business logic" layer of your app.
-1. Finally, explore the `./database-files` directory. This is where the SQL scripts are located that will be used to initialize the MySQL database.
-1. Bonus: If you want a totally separate copy of the template repo on your laptop to explore and experiment with without affecting your team repo, see the *Setting Up a Personal Sandbox Repo* section in [docs/RepoSetup.md](docs/RepoSetup.md).
+Streamlit pages never touch MySQL directly. They call the Flask API at
+`http://web-api:4000`, and only the API opens database connections
+(`api/backend/db_connection/__init__.py` hands out one connection per request).
 
-## Setting Up the Repos
+## Repository Layout
 
-See [docs/RepoSetup.md](docs/RepoSetup.md) for full instructions on forking and configuring the team repo, setting up the `.env` file, and running the Docker containers. An optional section there also covers setting up a personal sandbox repo for individual experimentation.
+```
+app/                    Streamlit front end
+  src/Home.py           Persona picker (the mock "login" screen)
+  src/pages/            One file per screen, numbered by persona
+  src/modules/nav.py    Role-based sidebar navigation
+api/                    Flask REST API
+  backend/rest_entry.py create_app(): config, DB hook, blueprint registration
+  backend/<domain>/     One blueprint per domain (see below)
+  backend/db_connection/ Per-request MySQL connection
+database-files/         talent_scout.sql — schema + seed data, run on first DB start
+docs/                   Design document and course setup guides
+datasets/, ml-src/      Empty placeholders from the course template
+```
 
-## Important Tips
+### Running it
 
-See [docs/ImportantTips.md](docs/ImportantTips.md) for tips on hot reloading, recovering from container crashes, and working with the MySQL container — including why you need the `-v` flag to pick up changes to your SQL files.
+Full instructions are in [docs/RepoSetup.md](docs/RepoSetup.md). The short version:
 
-## Handling User Role Access and Control
+```bash
+cp api/.env.template api/.env    # then fill in SECRET_KEY and MYSQL_ROOT_PASSWORD
+docker compose up -d
+```
 
-This project uses a simple Role-based Access Control (RBAC) system implemented in Streamlit. The template ships with example roles (*Political Strategist*, *USAID Worker*, *System Administrator*) to illustrate the pattern — **your team will replace these with the personas specific to your project**. You will define four personas and implement three of them.
+Then open <http://localhost:8501>. If you change anything in `database-files/`, the volume has
+to be dropped for MySQL to re-run the SQL:
 
-See [docs/RBAC.md](docs/RBAC.md) for a full explanation of how the RBAC system works and step-by-step instructions for adapting it to your own roles.
+```bash
+docker compose down db -v && docker compose up db -d
+```
 
-## Changing How the App Looks
+### A note on "login"
 
-The app's colors, fonts, and sidebar styling all come from `app/src/.streamlit/config.toml` — there is no CSS to edit. Save the file and the running app picks the change up; refresh the browser tab if you don't see it.
+`Home.py` shows one button per persona. Clicking a button sets `role`, `first_name`, and
+`user_id` in `st.session_state` and jumps to that persona's home page; `nav.py` then builds a
+sidebar containing only that role's pages. There are no passwords and no real authentication —
+this is the course template's RBAC pattern, described in [docs/RBAC.md](docs/RBAC.md), and it
+is deliberate: the project is about the data model, not about auth.
 
-See [docs/Theming.md](docs/Theming.md) for what each setting does and how to build your own palette.
+## The REST API
 
-## (Completely Optional) Incorporating ML Models into your Project
+Every TalentScout route is mounted under `/talent_scout`. Routes are grouped into six
+blueprints by the tables they own, so each blueprint is the single place to look for a given
+part of the schema.
 
-**This is entirely optional. No part of the project requires a machine learning model, and you are not expected to build one.** The template simply happens to include the plumbing for a hypothetical model, described below, in case your team is curious and has spare time. Skipping this section costs you nothing.
+**`athletes`** — `api/backend/athletes/athlete_routes.py` (athlete, personal_record, event)
 
-The model shipped in `api/backend/ml_models/model01.py` is a *fake* placeholder — it reads coefficients out of the `model1_params` table and computes a dot product. It is there to show the wiring, not to make real predictions.
+| Method | Route | Purpose |
+|---|---|---|
+| GET | `/athlete` | Athlete search; filters `min_gpa`, `min_height_cm`, `grad_year`, `gender`, `status` |
+| POST | `/athlete` | Create an athlete profile for an existing user |
+| GET | `/athlete/<id>` | Full profile with clips and personal records nested |
+| PUT | `/athlete/<id>` | Update metrics, academics, or recruitment status |
+| DELETE | `/athlete/<id>` | Delete the account (cascades through the user row) |
+| GET | `/personal_record` | All personal records; filters `athlete_id`, `event_id` |
+| GET | `/athlete/<id>/personal_record` | One athlete's record history, oldest first |
+| POST | `/athlete/<id>/personal_record` | Log a new personal record |
+| GET | `/event` | Event catalog for dropdowns |
 
-If you do want to explore it:
+**`clips`** — `api/backend/clips/clip_routes.py` (clip, comment)
 
-1. Collect and preprocess necessary datasets for your models.
-1. Build, train, and test your model in a Jupyter Notebook.
-   - You can store your datasets in the `datasets` folder and your notebook in the `ml-src` folder.
-1. Once your team is happy with the model's performance, convert your notebook code to a pure Python script.
-   - You can include the `training` and `testing` functionality as well as the `prediction` functionality.
-   - Develop and test this pure Python script first in the `ml-src` folder.
-1. Review the `api/backend/ml_models` module. **Important**: you would never want to hard code the model parameter weights directly in the prediction function — store them in the database, as `model01.py` does.
-1. The prediction route for the REST API is in `api/backend/simple/simple_routes.py`. It accepts two URL parameters and passes them to the `predict` function in the `ml_models` module, then packages the result back to Streamlit as JSON.
-1. Back in Streamlit, check out `app/src/pages/11_Prediction.py`. Two numeric input fields are created; when the button is pressed, it makes a request to the REST API at `/prediction/{var_01}/{var_02}` and displays the results.
+| Method | Route | Purpose |
+|---|---|---|
+| GET | `/clip` | The feed; filter `athlete_id` |
+| POST | `/clip` | Upload a clip |
+| GET | `/clip/<id>` | One clip with the poster's metrics and its comments |
+| PUT | `/clip/<id>` | Edit a caption |
+| DELETE | `/clip/<id>` | Remove a clip (comments cascade) |
+| GET | `/clip/<id>/comment` | Just the comment thread |
+| POST | `/comment` | Comment on a clip |
+| PUT | `/comment/<id>` | Edit a comment body |
+| DELETE | `/comment/<id>` | Remove a comment |
+
+**`recruiting`** — `api/backend/recruiting/recruiting_routes.py` (recruiter, university, sport,
+roster, opening)
+
+| Method | Route | Purpose |
+|---|---|---|
+| GET | `/recruiter` | All recruiters with their university; filter `university_id` |
+| GET | `/recruiter/<id>` | One recruiter with university and rosters nested |
+| DELETE | `/recruiter/<id>` | Delete a recruiter account |
+| GET | `/university` | Universities with recruiter counts |
+| GET | `/sports` | Sport catalog for dropdowns |
+| GET | `/roster` | All rosters; filters `recruiter_id`, `sport_id`, `division`, `gender` |
+| POST | `/roster` | Post a roster |
+| GET | `/roster/<id>` | One roster with its openings nested |
+| DELETE | `/roster/<id>` | Take a roster down |
+| GET | `/opening` | Openings; filters `roster_id`, `position`, `grad_year`, `sport_id`, `recruiter_id`, and `athlete_id` (only openings that athlete qualifies for) |
+| POST | `/opening` | Add an opening to a roster |
+| DELETE | `/roster/<id>/opening/<n>` | Remove one opening |
+
+**`engagement`** — `api/backend/engagement/engagement_routes.py` (recruiter_view, roster_view)
+
+| Method | Route | Purpose |
+|---|---|---|
+| GET | `/recruiter_view` | All profile views; filters `recruiter_id`, `athlete_id` |
+| GET | `/recruiter_view/<athlete_id>` | Coaches who viewed this athlete, with contact info |
+| POST | `/recruiter_view/<athlete_id>` | Record a profile view |
+| GET | `/roster_view` | All roster views; filters `recruiter_id`, `roster_id`, `athlete_id` |
+| GET | `/roster_view/<roster_id>` | Athletes who viewed this roster, with their metrics |
+| POST | `/roster_view/<roster_id>` | Record a roster view |
+
+**`admin`** — `api/backend/admin/admin_routes.py` (announcement, user moderation)
+
+| Method | Route | Purpose |
+|---|---|---|
+| GET | `/announcement` | All announcements; `active=true` for the current window only |
+| GET | `/announcement/<id>` | One announcement with its author |
+| POST | `/announcement` | Post an announcement |
+| PUT | `/announcement/<id>` | Reword or reschedule |
+| DELETE | `/announcement/<id>` | Pull an announcement down |
+| GET | `/user` | Every account with its derived role; filter `role` |
+| GET | `/user/<id>` | One account with clip/comment/roster counts |
+| DELETE | `/user/<id>` | Delete any account regardless of role |
+
+**`analytics`** — `api/backend/analytics/analytics_routes.py` (read-only, de-identified)
+
+| Method | Route | Purpose |
+|---|---|---|
+| GET | `/analytics/athlete_summary` | Counts and averages; `group_by` = `gender`, `graduation_year`, `recruitment_status`, or `sport` |
+| GET | `/analytics/athlete` | One de-identified row per athlete, ready to export |
+| GET | `/analytics/personal_record` | Average performance per event per date |
+| GET | `/analytics/event` | Per-event record counts, best and average times |
+| GET | `/analytics/platform_summary` | Platform-wide totals in a single row |
+
+The course template's demo blueprint (`api/backend/simple/simple_routes.py`) is still mounted
+at the root and is the quickest way to confirm the API container is alive without involving
+MySQL: `/`, `/data`, `/niceMessage`, `/message`, `/playlist`.
+
+### Conventions used by every route
+
+- Handlers open `get_db().cursor(dictionary=True)`, wrap the work in `try/except/finally`, and
+  always close the cursor. Writes call `get_db().commit()`.
+- Filters are appended to a `WHERE 1=1` base clause with `%s` placeholders, so parameters are
+  never string-formatted into SQL. Where a *column* has to be interpolated (the analytics
+  `group_by`), it comes from a whitelist dict.
+- `TIME` columns are `CAST(... AS CHAR)` because mysql-connector returns them as timedeltas,
+  which Flask cannot serialize.
+- Missing rows return 404 with `{"error": ...}`, bad input returns 400, database failures are
+  logged and return 500.
+
+## Database
+
+`database-files/talent_scout.sql` creates the `talent_scout` schema and seeds it. MySQL runs
+every `.sql` file in that folder in alphabetical order the first time the container starts.
+`user` is a supertype with `athlete`, `recruiter`, `administrator`, and `analyst` subtype
+tables keyed on `user_id`, which is why deleting an account means deleting the `user` row and
+letting `ON DELETE CASCADE` do the rest.
+
+## Documentation
+
+| Document | Description |
+|---|---|
+| [docs/TalentScout.md](docs/TalentScout.md) | Phase 1/2 design document: personas, user stories, wireframes, ER diagrams, SQL |
+| [docs/README.md](docs/README.md) | Index of the course template documentation |
+| [docs/PreReq.md](docs/PreReq.md) | Python environment and tooling setup |
+| [docs/RepoSetup.md](docs/RepoSetup.md) | Forking, `.env`, running the containers |
+| [docs/ImportantTips.md](docs/ImportantTips.md) | Hot reloading, container recovery, MySQL gotchas |
+| [docs/RBAC.md](docs/RBAC.md) | How the role-based sidebar works |
+| [docs/Theming.md](docs/Theming.md) | Colors and fonts via `app/src/.streamlit/config.toml` |

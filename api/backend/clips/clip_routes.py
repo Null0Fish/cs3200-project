@@ -1,10 +1,25 @@
+"""
+Clips blueprint: the content side of the platform.
+
+Covers highlight clips and the comments left on them — comments have no meaning
+apart from the clip they belong to, so both resources live together here.
+
+Registered in rest_entry.py with:
+    app.register_blueprint(clips, url_prefix='/talent_scout')
+"""
+import datetime
+
 from flask import Blueprint, jsonify, request, current_app
 from backend.db_connection import get_db
 from mysql.connector import Error
-# Create a Blueprint for clip routes
-# Register in rest_entry.py with:
-#   app.register_blueprint(clips, url_prefix='/talent_scout')
+
 clips = Blueprint("clips", __name__)
+
+
+# ---------------------------------------------------------------------------
+# Clips
+# ---------------------------------------------------------------------------
+
 # Get the clip feed, optionally narrowed to one athlete
 # Serves 2.1 (recruiter scrolls the feed) and 3.1 (admin's unfiltered moderation feed).
 # The video file itself is served from /clips/<clip_id>, so the frontend builds
@@ -38,6 +53,8 @@ def get_clips():
         return jsonify({"error": str(e)}), 500
     finally:
         cursor.close()
+
+
 # Get one clip with the posting athlete's details and its comments (2.3)
 # This is the route behind "see more information about the athletes in clips he sees" -
 # the recruiter taps a clip in the feed and gets the athlete's metrics back.
@@ -76,6 +93,8 @@ def get_clip(clip_id):
         return jsonify({"error": str(e)}), 500
     finally:
         cursor.close()
+
+
 # Upload a highlight clip (1.3)
 # Required fields: user_id, caption. posted_at defaults to today if omitted.
 # clip.user_id is a foreign key to athlete, so recruiters and admins cannot post.
@@ -107,6 +126,8 @@ def upload_clip():
         return jsonify({"error": str(e)}), 500
     finally:
         cursor.close()
+
+
 # Edit a clip's caption (1.3 - the "edit" link under each clip in Wireframe 2)
 # Only the caption is editable; user_id and clip_id are fixed.
 # Example: PUT /talent_scout/clip/1 with JSON body containing caption
@@ -135,6 +156,8 @@ def update_clip(clip_id):
         return jsonify({"error": str(e)}), 500
     finally:
         cursor.close()
+
+
 # Delete a clip for a content violation (3.2). Comments on it cascade with it.
 # Example: DELETE /talent_scout/clip/1
 @clips.route("/clip/<int:clip_id>", methods=["DELETE"])
@@ -150,6 +173,136 @@ def delete_clip(clip_id):
         return jsonify({"message": "Clip deleted successfully"}), 200
     except Error as e:
         current_app.logger.error(f'Database error in delete_clip: {e}')
+        return jsonify({"error": str(e)}), 500
+    finally:
+        cursor.close()
+
+
+# ---------------------------------------------------------------------------
+# Comments on clips
+# ---------------------------------------------------------------------------
+
+# Get just the comment thread for a clip, newest first (3.5 moderation view)
+# GET /clip/<id> already embeds these; this route exists so the frontend can
+# refresh a thread after posting without re-fetching the whole clip.
+# Example: /talent_scout/clip/1/comment
+@clips.route("/clip/<int:clip_id>/comment", methods=["GET"])
+def get_clip_comments(clip_id):
+    cursor = get_db().cursor(dictionary=True)
+    try:
+        current_app.logger.info(f'GET /talent_scout/clip/{clip_id}/comment')
+        cursor.execute("SELECT clip_id FROM clip WHERE clip_id = %s", (clip_id,))
+        if not cursor.fetchone():
+            return jsonify({"error": "Clip not found"}), 404
+        cursor.execute("""
+            SELECT cm.comment_id, cm.content, cm.posted_at, cm.user_id,
+                   u.first_name, u.last_name
+            FROM comment cm
+                LEFT JOIN user u ON cm.user_id = u.user_id
+            WHERE cm.clip_id = %s
+            ORDER BY cm.posted_at DESC
+        """, (clip_id,))
+        return jsonify(cursor.fetchall()), 200
+    except Error as e:
+        current_app.logger.error(f'Database error in get_clip_comments: {e}')
+        return jsonify({"error": str(e)}), 500
+    finally:
+        cursor.close()
+
+
+# Post a new comment on a clip
+# Required fields: clip_id, user_id, content. posted_at defaults to today.
+# comment.user_id points at user (not athlete), so recruiters can comment too.
+# Example: POST /talent_scout/comment with JSON body
+@clips.route("/comment", methods=["POST"])
+def create_comment():
+    cursor = get_db().cursor(dictionary=True)
+    try:
+        data = request.get_json() or {}
+        current_app.logger.info('POST /talent_scout/comment')
+        for field in ("clip_id", "user_id", "content"):
+            if field not in data:
+                return jsonify({"error": f"{field} is a required field"}), 400
+
+        content = data["content"]
+        if not isinstance(content, str) or not content.strip():
+            return jsonify({"error": "content must be a non-empty string"}), 400
+
+        cursor.execute("SELECT clip_id FROM clip WHERE clip_id = %s", (data["clip_id"],))
+        if not cursor.fetchone():
+            return jsonify({"error": "not a valid clip_id"}), 400
+
+        cursor.execute("SELECT user_id FROM user WHERE user_id = %s", (data["user_id"],))
+        if not cursor.fetchone():
+            return jsonify({"error": "not a valid user_id"}), 400
+
+        cursor.execute("""
+            INSERT INTO comment (clip_id, user_id, posted_at, content)
+            VALUES (%s, %s, %s, %s)
+        """, (
+            data["clip_id"],
+            data["user_id"],
+            data.get("posted_at") or datetime.date.today(),
+            content,
+        ))
+        get_db().commit()
+        return jsonify({
+            "message": "Comment created successfully",
+            "comment_id": cursor.lastrowid,
+        }), 201
+    except Error as e:
+        current_app.logger.error(f'Database error in create_comment: {e}')
+        return jsonify({"error": str(e)}), 500
+    finally:
+        cursor.close()
+
+
+# Edit an existing comment
+# Only the comment body can be changed; the clip and author stay fixed.
+# Example: PUT /talent_scout/comment/4 with JSON body {"content": "..."}
+@clips.route("/comment/<int:comment_id>", methods=["PUT"])
+def update_comment(comment_id):
+    cursor = get_db().cursor(dictionary=True)
+    try:
+        data = request.get_json() or {}
+        current_app.logger.info(f'PUT /talent_scout/comment/{comment_id}')
+        if "content" not in data:
+            return jsonify({"error": "content is a required field"}), 400
+
+        content = data["content"]
+        if not isinstance(content, str) or not content.strip():
+            return jsonify({"error": "content must be a non-empty string"}), 400
+
+        cursor.execute("SELECT comment_id FROM comment WHERE comment_id = %s", (comment_id,))
+        if not cursor.fetchone():
+            return jsonify({"error": "Comment not found"}), 404
+
+        cursor.execute("UPDATE comment SET content = %s WHERE comment_id = %s",
+                       (content, comment_id))
+        get_db().commit()
+        return jsonify({"message": "Comment updated successfully"}), 200
+    except Error as e:
+        current_app.logger.error(f'Database error in update_comment: {e}')
+        return jsonify({"error": str(e)}), 500
+    finally:
+        cursor.close()
+
+
+# Delete a comment for inappropriate content (3.5)
+# Example: DELETE /talent_scout/comment/1
+@clips.route("/comment/<int:comment_id>", methods=["DELETE"])
+def delete_comment(comment_id):
+    cursor = get_db().cursor(dictionary=True)
+    try:
+        current_app.logger.info(f'DELETE /talent_scout/comment/{comment_id}')
+        cursor.execute("SELECT comment_id FROM comment WHERE comment_id = %s", (comment_id,))
+        if not cursor.fetchone():
+            return jsonify({"error": "Comment not found"}), 404
+        cursor.execute("DELETE FROM comment WHERE comment_id = %s", (comment_id,))
+        get_db().commit()
+        return jsonify({"message": "Comment deleted successfully"}), 200
+    except Error as e:
+        current_app.logger.error(f'Database error in delete_comment: {e}')
         return jsonify({"error": str(e)}), 500
     finally:
         cursor.close()

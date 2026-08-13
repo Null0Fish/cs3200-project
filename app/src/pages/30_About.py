@@ -9,12 +9,15 @@ st.write("# About this App")
 
 st.markdown(
     """
-    This is a demo app for the CS 3200 Summer B 2026 Database Design Project Course.  
+    **TalentScout** is a bidirectional recruiting platform for high school athletes
+    and college recruiters, built by Team Purplicious for CS 3200 (Summer B 2026).
 
-    The goal of this demo is to provide information on the tech stack 
-    being used as well as demo some of the features of the various platforms. 
+    Athletes publish their metrics, personal records, and highlight clips.
+    Recruiters post the rosters and openings they need to fill and scroll a feed of
+    clips to find talent. Both sides can see who has been looking at them.
 
-    Stay tuned for more information and features to come!
+    The app runs on Streamlit, talks to a Flask REST API, and stores everything in
+    MySQL — see the repository README for the full route map.
     """
 )
 

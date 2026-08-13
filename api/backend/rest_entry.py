@@ -7,17 +7,10 @@ from backend.db_connection import init_app as init_db
 from backend.simple.simple_routes import simple_routes
 from backend.athletes.athlete_routes import athletes
 from backend.clips.clip_routes import clips
-from backend.announcements.announcement_routes import announcements
-from backend.roster.roster_routes import rosters as roster_detail_routes
-from backend.recruiter.recruiter_routes import recruiter
-from backend.comment.comment_routes import comment
-from backend.personal_record.personal_record_routes import personal_record
-from backend.rosters.roster_routes import rosters
-from backend.recruiter_views.recruiter_view_routes import recruiter_views
-from backend.roster_views.roster_view_routes import roster_views
-from backend.opening.opening_routes import openings
-from backend.sports.sports_routes import sports
-
+from backend.recruiting.recruiting_routes import recruiting
+from backend.engagement.engagement_routes import engagement
+from backend.admin.admin_routes import admin
+from backend.analytics.analytics_routes import analytics
 
 
 def create_app():
@@ -44,20 +37,25 @@ def create_app():
     app.logger.info("create_app(): initializing database connection")
     init_db(app)
 
-    # Register the routes from each Blueprint with the app object
-    # and give a url prefix to each.
+    # Register the routes from each Blueprint with the app object.
+    #
+    # Every TalentScout blueprint is mounted under /talent_scout, and each one
+    # owns a group of related tables:
+    #   athletes   - athlete profiles, personal records, events
+    #   clips      - highlight clips and their comments
+    #   recruiting - recruiters, universities, sports, rosters, openings
+    #   engagement - who viewed which athlete profile / roster
+    #   admin      - announcements and account moderation
+    #   analytics  - read-only aggregate and de-identified data for analysts
+    #
+    # simple_routes is the template's demo/health-check blueprint and stays at
+    # the root (/, /data, /niceMessage, ...).
     app.logger.info("create_app(): registering blueprints")
     app.register_blueprint(simple_routes)
     app.register_blueprint(athletes, url_prefix="/talent_scout")
     app.register_blueprint(clips, url_prefix="/talent_scout")
-    app.register_blueprint(announcements, url_prefix="/talent_scout")
-    app.register_blueprint(roster_detail_routes, url_prefix="/talent_scout")
-    app.register_blueprint(rosters, url_prefix="/talent_scout")
-    app.register_blueprint(recruiter, url_prefix="/talent_scout")
-    app.register_blueprint(comment, url_prefix="/talent_scout")
-    app.register_blueprint(personal_record, url_prefix="/talent_scout")
-    app.register_blueprint(recruiter_views, url_prefix="/talent_scout")
-    app.register_blueprint(roster_views, url_prefix="/talent_scout")
-    app.register_blueprint(openings, url_prefix="/talent_scout")
-    app.register_blueprint(sports, url_prefix="/talent_scout")
+    app.register_blueprint(recruiting, url_prefix="/talent_scout")
+    app.register_blueprint(engagement, url_prefix="/talent_scout")
+    app.register_blueprint(admin, url_prefix="/talent_scout")
+    app.register_blueprint(analytics, url_prefix="/talent_scout")
     return app

@@ -15,57 +15,47 @@ def about_page_nav():
     st.sidebar.page_link("pages/30_About.py", label="About", icon="🧠")
 
 
-# ---- Role: pol_strat_advisor ------------------------------------------------
+# ---- Role: athlete ----------------------------------------------------------
 
-def pol_strat_home_nav():
-    st.sidebar.page_link(
-        "pages/00_Pol_Strat_Home.py", label="Political Strategist Home", icon="👤"
-    )
+def athlete_home_nav():
+    st.sidebar.page_link("pages/00_Athlete_Home.py", label="Athlete Home", icon="🏃")
 
 
-def world_bank_viz_nav():
-    st.sidebar.page_link(
-        "pages/01_World_Bank_Viz.py", label="World Bank Visualization", icon="🏦"
-    )
+def athlete_profile_nav():
+    st.sidebar.page_link("pages/01_Athlete_Profile.py", label="My Profile", icon="👤")
 
 
-def map_demo_nav():
-    st.sidebar.page_link("pages/02_Map_Demo.py", label="Map Demonstration", icon="🗺️")
+def my_clips_nav():
+    st.sidebar.page_link("pages/02_My_Clips.py", label="My Clips", icon="🎬")
 
 
-# ---- Role: usaid_worker -----------------------------------------------------
-
-def usaid_worker_home_nav():
-    st.sidebar.page_link(
-        "pages/10_USAID_Worker_Home.py", label="USAID Worker Home", icon="🏠"
-    )
+def upload_clips_nav():
+    st.sidebar.page_link("pages/03_Upload_Clips.py", label="Upload a Clip", icon="⬆️")
 
 
-def ngo_directory_nav():
-    st.sidebar.page_link("pages/14_NGO_Directory.py", label="NGO Directory", icon="📁")
+# ---- Role: recruiter --------------------------------------------------------
+
+def recruiter_home_nav():
+    st.sidebar.page_link("pages/10_Recruiter_Home.py", label="Recruiter Home", icon="🔎")
 
 
-def add_ngo_nav():
-    st.sidebar.page_link("pages/15_Add_NGO.py", label="Add New NGO", icon="➕")
+def recruiter_profile_nav():
+    st.sidebar.page_link("pages/11_Recruiter_Profile.py", label="My Profile", icon="👤")
 
 
-def prediction_nav():
-    st.sidebar.page_link(
-        "pages/11_Prediction.py", label="Regression Prediction", icon="📈"
-    )
+def add_roster_nav():
+    st.sidebar.page_link("pages/12_Add_Roster.py", label="Add Roster", icon="➕")
 
 
-def api_test_nav():
-    st.sidebar.page_link("pages/12_API_Test.py", label="Test the API", icon="🛜")
-
-
-def classification_nav():
-    st.sidebar.page_link(
-        "pages/13_Classification.py", label="Classification Demo", icon="🌺"
-    )
+def view_clips_nav():
+    st.sidebar.page_link("pages/13_View_Clips.py", label="Clip Feed", icon="🎥")
 
 
 # ---- Role: administrator ----------------------------------------------------
+
+def admin_home_nav():
+    st.sidebar.page_link("pages/20_Admin_Home.py", label="Admin Home", icon="🛠️")
+
 
 def create_announcement_nav():
     st.sidebar.page_link(
@@ -94,20 +84,20 @@ def SideBarLinks(show_home=False):
 
     if st.session_state["authenticated"]:
 
-        if st.session_state["role"] == "pol_strat_advisor":
-            pol_strat_home_nav()
-            world_bank_viz_nav()
-            map_demo_nav()
+        if st.session_state["role"] == "athlete":
+            athlete_home_nav()
+            athlete_profile_nav()
+            my_clips_nav()
+            upload_clips_nav()
 
-        if st.session_state["role"] == "usaid_worker":
-            usaid_worker_home_nav()
-            ngo_directory_nav()
-            add_ngo_nav()
-            prediction_nav()
-            api_test_nav()
-            classification_nav()
+        if st.session_state["role"] == "recruiter":
+            recruiter_home_nav()
+            recruiter_profile_nav()
+            add_roster_nav()
+            view_clips_nav()
 
         if st.session_state["role"] == "administrator":
+            admin_home_nav()
             create_announcement_nav()
 
     # About link appears at the bottom for all roles
