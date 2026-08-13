@@ -55,7 +55,7 @@ app/                    Streamlit front end
   src/pages/            One file per screen, numbered by persona
   src/modules/nav.py    Role-based sidebar navigation
   src/modules/api.py    Shared API request/flash-message helpers
-  src/modules/clips.py  Building a clip's <video> element
+  src/modules/clips.py  Playing a clip's video, and where its file lives
   src/modules/moderation.py  Admin-only page guard and two-click delete
 api/                    Flask REST API
   backend/rest_entry.py create_app(): config, DB hook, blueprint registration
@@ -127,13 +127,9 @@ part of the schema.
 | PUT | `/comment/<id>` | Edit a comment body |
 | DELETE | `/comment/<id>` | Remove a comment |
 
-Clip videos are the one thing that doesn't live in MySQL. A clip's video is
-written to disk as `<clip_id>` plus its original extension and served from
-`GET /clips/<clip_id>` — the one route mounted outside `/talent_scout`, so a
-page can build `<video src="/clips/12">` from a clip_id it already has without
-storing a URL or streaming a BLOB back through the database. `GET /clip` and
-`GET /clip/<id>` include a `has_video` flag so the frontend knows whether to
-draw a player. See `api/backend/clips/clip_storage.py`.
+Clip videos are the one thing that doesn't live in MySQL — the bytes go on disk
+and the row only carries the file's name in `clip_url`. See
+[Clip videos](#clip-videos) below.
 
 **`recruiting`** — `api/backend/recruiting/recruiting_routes.py` (recruiter, university, sport,
 roster, opening)
@@ -205,12 +201,19 @@ the data model — and the only URL the *browser* requests directly, so it uses 
 published host port (`http://localhost:4000`) rather than the `web-api` Docker hostname the
 Streamlit pages call. Set `CLIP_ASSET_BASE_URL` on the app container to override that.
 
-A clip whose `clip_url` is set renders as an HTML `<video>` element pointing at
+A clip whose `clip_url` is set plays in a `st.video` player pointing at
 `http://localhost:4000/assets/clips/<filename>`; a clip whose `clip_url` is NULL has no video
-attached and renders without a player, which every page showing clips has to handle. The
-athlete names the file when uploading a clip and can change it later from **My Clips** — the
-file itself is placed in `api/assets/clips` rather than uploaded through the app. See
-[api/assets/clips/README.md](api/assets/clips/README.md).
+attached and renders without a player, which every page showing clips has to handle.
+
+Athletes upload the file itself through the app — **Upload a Clip** sends it alongside the
+caption as multipart field `video`, and **My Clips** can attach or replace one later. The API
+writes it into `api/assets/clips` named after the clip's id (clip 12 uploaded as `race.mp4`
+becomes `/12.mp4`) and stores that name in `clip_url`; the uploaded name never reaches the
+file system. Files can also be dropped into `api/assets/clips` by hand and pointed at from
+`clip_url`, which is how the seeded `/super_cool_clip.mp4` works. Deleting a clip removes an
+uploaded file with it, but leaves hand-placed ones alone. See
+[api/assets/clips/README.md](api/assets/clips/README.md) and
+`api/backend/clips/clip_storage.py`.
 
 `clip_url` is a column on `clip`, so a database created before it was added has to be
 re-seeded — `docker compose down db -v && docker compose up db -d` — or every clip request

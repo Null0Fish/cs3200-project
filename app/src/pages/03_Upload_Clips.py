@@ -1,9 +1,20 @@
+"""
+The athlete's upload form (story 1.3).
+
+The video goes up with the caption in one multipart request, so the API can name
+the file after the clip_id it creates and record it in the clip's clip_url. A
+clip is never left in the feed as a row nobody can watch.
+"""
 import datetime
-import streamlit as st
+import logging
+logger = logging.getLogger(__name__)
+
 import requests
-from modules.clips import normalize_clip_url
+import streamlit as st
+
+from modules.api import api_error
+from modules.clips import CLIP_API_URL, VIDEO_TYPES
 from modules.nav import SideBarLinks
-from modules.clips import CLIP_API_URL
 
 st.set_page_config(layout='wide')
 
@@ -12,10 +23,6 @@ SideBarLinks()
 st.title("Upload a Clip")
 
 user_id = st.session_state['user_id']
-
-# Matches the extensions the API is willing to store (see clip_storage.py).
-VIDEO_TYPES = ["mp4", "webm", "ogg", "mov", "m4v"]
-
 
 with st.form("upload_clip_form"):
     st.subheader("Clip Details")
@@ -32,32 +39,28 @@ with st.form("upload_clip_form"):
         elif video is None:
             st.error("Please choose a video file")
         else:
-            clip_data = {
-                "user_id": user_id,
-                "caption": caption,
-                "posted_at": str(posted_at),
-                "clip_url": normalize_clip_url(clip_file),
-            }
-
             try:
-                # The video goes up with the caption in one multipart request,
-                # so the API can name the file after the clip_id it creates and
-                # never has a clip row sitting around without a video.
                 response = requests.post(
                     CLIP_API_URL,
-                    data=clip_data,
+                    data={
+                        "user_id": user_id,
+                        "caption": caption,
+                        "posted_at": str(posted_at),
+                    },
                     files={"video": (video.name, video.getvalue(), video.type)},
+                    timeout=30,
                 )
 
                 if response.status_code == 201:
                     st.success("Clip uploaded!")
+                    # The freshly uploaded file, straight from the uploader —
+                    # no round trip to the API needed to show it back.
                     st.video(video)
                 else:
-                    st.error(
-                        f"Failed to upload clip: {response.json().get('error', 'Unknown error')}"
-                    )
+                    st.error(f"Failed to upload clip: {api_error(response)}")
 
             except requests.exceptions.RequestException as e:
+                logger.error(f'POST /clip failed: {e}')
                 st.error(f"Error connecting to the API: {str(e)}")
                 st.info("Please ensure the API server is running")
 

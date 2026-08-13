@@ -11,7 +11,7 @@ services:
       # Clip videos are fetched by the viewer's browser, not by the app
       # container, so this has to be an address the host can reach — the port
       # the api service publishes below, not the web-api compose hostname.
-      - CLIP_VIDEO_BASE_URL=http://localhost:4000/clips
+      - CLIP_ASSET_BASE_URL=http://localhost:4000/assets/clips
     ports:
       - 8501:8501
 

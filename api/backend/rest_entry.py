@@ -6,7 +6,7 @@ import logging
 from backend.db_connection import init_app as init_db
 from backend.simple.simple_routes import simple_routes
 from backend.athletes.athlete_routes import athletes
-from backend.clips.clip_routes import clips, clip_files
+from backend.clips.clip_routes import clips
 from backend.clips.clip_storage import MAX_CLIP_BYTES
 from backend.recruiting.recruiting_routes import recruiting
 from backend.engagement.engagement_routes import engagement
@@ -56,12 +56,11 @@ def create_app():
     #   analytics  - read-only aggregate and de-identified data for analysts
     #
     # simple_routes is the template's demo/health-check blueprint and stays at
-    # the root (/, /data, /niceMessage, ...). clip_files also stays at the root
-    # so clip videos are served from /clips/<clip_id>, short enough to use
-    # directly as a <video> src.
+    # the root (/, /data, /niceMessage, ...), as does assets — clip videos are
+    # files the browser loads directly, not resources in the data model.
     app.logger.info("create_app(): registering blueprints")
     app.register_blueprint(simple_routes)
-    app.register_blueprint(clip_files)
+    app.register_blueprint(assets)
     app.register_blueprint(athletes, url_prefix="/talent_scout")
     app.register_blueprint(clips, url_prefix="/talent_scout")
     app.register_blueprint(recruiting, url_prefix="/talent_scout")
