@@ -94,7 +94,7 @@ def get_athlete_detail(athlete_id):
             return jsonify({"error": "Athlete not found"}), 404
         # Reuse the same cursor for the follow-up queries
         cursor.execute("""
-            SELECT clip_id, caption, posted_at
+            SELECT clip_id, caption, clip_url, posted_at
             FROM clip
             WHERE user_id = %s
             ORDER BY posted_at DESC

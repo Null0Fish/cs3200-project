@@ -57,8 +57,9 @@ def serve_clip_video(clip_id):
 
 # Get the clip feed, optionally narrowed to one athlete
 # Serves 2.1 (recruiter scrolls the feed) and 3.1 (admin's unfiltered moderation feed).
-# The video file itself is served from /clips/<clip_id>, so the frontend builds
-# the <video src> from clip_id rather than from a stored URL.
+# clip_url is the clip's video file under /assets/clips, or NULL when no video
+# was ever attached; comment_count is what the moderation feed shows next to a
+# clip so an admin can spot the ones with a comment thread to review.
 # Example: /talent_scout/clip?athlete_id=1
 @clips.route("/clip", methods=["GET"])
 def get_clips():
@@ -68,8 +69,10 @@ def get_clips():
         athlete_id = request.args.get("athlete_id")
         # WHERE 1=1 lets us append AND clauses cleanly without special-casing the first filter
         query = """
-            SELECT c.clip_id, c.caption, c.posted_at, c.user_id AS athlete_id,
-                   u.first_name, u.last_name
+            SELECT c.clip_id, c.caption, c.clip_url, c.posted_at,
+                   c.user_id AS athlete_id, u.first_name, u.last_name,
+                   (SELECT COUNT(*) FROM comment cm
+                    WHERE cm.clip_id = c.clip_id) AS comment_count
             FROM clip c
                 JOIN user u ON c.user_id = u.user_id
             WHERE 1=1
@@ -105,7 +108,8 @@ def get_clip(clip_id):
     try:
         current_app.logger.info(f'GET /talent_scout/clip/{clip_id}')
         query = """
-            SELECT c.clip_id, c.caption, c.posted_at, c.user_id AS athlete_id,
+            SELECT c.clip_id, c.caption, c.clip_url, c.posted_at,
+                   c.user_id AS athlete_id,
                    u.first_name, u.last_name, a.gpa, a.height_cm, a.weight_kg,
                    a.graduation_year, a.recruitment_status
             FROM clip c
@@ -137,8 +141,10 @@ def get_clip(clip_id):
 
 
 # Upload a highlight clip (1.3)
-# Required fields: user_id, caption. posted_at defaults to today if omitted.
+# Required fields: user_id, caption. posted_at defaults to today if omitted, and
+# clip_url is optional - a clip with no video file attached is still a valid row.
 # clip.user_id is a foreign key to athlete, so recruiters and admins cannot post.
+
 # Send the video as a multipart form with the file under `video` and the text
 # fields alongside it; a plain JSON body still works and creates a clip with no
 # video, which can be filled in later via PUT /clip/<id>/video.
@@ -158,8 +164,8 @@ def upload_clip():
             if field not in data:
                 return jsonify({"error": f"Missing required field: {field}"}), 400
         query = """
-            INSERT INTO clip (user_id, posted_at, caption)
-            VALUES (%s, COALESCE(%s, CURDATE()), %s)
+            INSERT INTO clip (user_id, posted_at, caption, clip_url)
+            VALUES (%s, COALESCE(%s, CURDATE()), %s, %s)
         """
         cursor.execute(query, (
             data["user_id"],
@@ -167,6 +173,7 @@ def upload_clip():
             # and COALESCE only falls back to CURDATE() on a real NULL.
             data.get("posted_at") or None,
             data["caption"],
+            data.get("clip_url"),
         ))
         clip_id = cursor.lastrowid
 
@@ -231,8 +238,9 @@ def update_clip(clip_id):
         cursor.execute("SELECT clip_id FROM clip WHERE clip_id = %s", (clip_id,))
         if not cursor.fetchone():
             return jsonify({"error": "Clip not found"}), 404
-        # Build update query dynamically based on provided fields
-        allowed_fields = ["caption"]
+        # Build update query dynamically based on provided fields.
+        # Passing clip_url as null detaches the video without deleting the clip.
+        allowed_fields = ["caption", "clip_url"]
         update_fields = [f"{f} = %s" for f in allowed_fields if f in data]
         params = [data[f] for f in allowed_fields if f in data]
         if not update_fields:
@@ -276,6 +284,47 @@ def delete_clip(clip_id):
 # ---------------------------------------------------------------------------
 # Comments on clips
 # ---------------------------------------------------------------------------
+
+# Get every comment on the platform, newest first (3.5)
+# This is the admin's moderation list: one request returns the whole platform's
+# comments, so the feed page can group them by clip instead of asking for each
+# clip's thread separately. Optional filters: clip_id, user_id.
+# comment.user_id is ON DELETE SET NULL, so first_name/last_name come back NULL
+# for a comment whose author has since been deleted.
+# Example: /talent_scout/comment?clip_id=1
+@clips.route("/comment", methods=["GET"])
+def get_comments():
+    cursor = get_db().cursor(dictionary=True)
+    try:
+        current_app.logger.info('GET /talent_scout/comment')
+        # WHERE 1=1 lets us append AND clauses cleanly without special-casing the first filter
+        query = """
+            SELECT cm.comment_id, cm.clip_id, cm.content, cm.posted_at,
+                   cm.user_id, u.first_name, u.last_name,
+                   c.caption AS clip_caption, c.user_id AS athlete_id
+            FROM comment cm
+                JOIN clip c ON c.clip_id = cm.clip_id
+                LEFT JOIN user u ON u.user_id = cm.user_id
+            WHERE 1=1
+        """
+        params = []
+        for param, column in (("clip_id", "cm.clip_id"),
+                              ("user_id", "cm.user_id")):
+            value = request.args.get(param)
+            if value:
+                query += f" AND {column} = %s"
+                params.append(value)
+        query += " ORDER BY cm.posted_at DESC, cm.comment_id DESC"
+        cursor.execute(query, params)
+        comment_list = cursor.fetchall()
+        current_app.logger.info(f'Retrieved {len(comment_list)} comments')
+        return jsonify(comment_list), 200
+    except Error as e:
+        current_app.logger.error(f'Database error in get_comments: {e}')
+        return jsonify({"error": str(e)}), 500
+    finally:
+        cursor.close()
+
 
 # Get just the comment thread for a clip, newest first (3.5 moderation view)
 # GET /clip/<id> already embeds these; this route exists so the frontend can

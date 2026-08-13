@@ -4,17 +4,22 @@ logger = logging.getLogger(__name__)
 
 import streamlit as st
 import requests
+from modules.api import delete_resource, fetch, full_name, show_flash
+from modules.moderation import confirm_delete, require_admin
 from modules.nav import SideBarLinks
 
 st.set_page_config(layout='wide')
 
 SideBarLinks()
+require_admin()
 
 # API endpoint that inserts a row into the announcement table
 API_URL = "http://web-api:4000/talent_scout/announcement"
 
-st.title('Create Announcement')
+st.title('Announcements')
 st.write('Post a platform-wide announcement and schedule when it should be visible.')
+
+show_flash()
 
 # announcement.user_id is a foreign key to administrator, so we post the
 # logged-in admin's user_id from the session.
@@ -74,3 +79,38 @@ if submitted:
             logger.error(f'Error posting announcement: {e}')
             st.error(f'Error connecting to the API: {str(e)}')
             st.info('Please ensure the API server is running')
+
+# Everything already scheduled, so a notice that is wrong or no longer wanted can
+# be pulled back down. Home.py shows whichever active announcement has the lowest
+# id to every user who logs in, so deleting one is how it stops appearing.
+st.divider()
+st.subheader('Scheduled Announcements')
+
+announcements = fetch('/announcement')
+
+if announcements is not None:
+    if not announcements:
+        st.info('No announcements have been posted.')
+    else:
+        for announcement in announcements:
+            announcement_id = announcement['announcement_id']
+
+            with st.expander(
+                f"{announcement['title']} — {announcement['scheduled_start']}"
+            ):
+                if announcement.get('body'):
+                    st.write(announcement['body'])
+
+                st.caption(
+                    f"Announcement #{announcement_id} · "
+                    f"visible {announcement['scheduled_start']} to "
+                    f"{announcement['scheduled_end']} · posted by "
+                    f"{full_name(announcement, fallback='a deleted account')}"
+                )
+
+                if confirm_delete('Delete Announcement', key=f'announcement_{announcement_id}'):
+                    logger.info(f'Admin deleting announcement {announcement_id}')
+                    delete_resource(
+                        f'/announcement/{announcement_id}',
+                        f'Deleted announcement #{announcement_id}.',
+                    )

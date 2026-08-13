@@ -1,8 +1,16 @@
+"""
+The recruiter's clip feed (story 2.1).
+
+Every clip on the platform, newest first. A clip whose clip_url is set plays
+here; one without a video file attached shows its caption and comments only.
+"""
 import logging
 logger = logging.getLogger(__name__)
 
-import requests
 import streamlit as st
+
+from modules.api import fetch, full_name
+from modules.clips import render_clip_video
 from modules.nav import SideBarLinks
 from modules.clips import CLIP_API_URL, show_clip_video
 

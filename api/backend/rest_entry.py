@@ -12,6 +12,7 @@ from backend.recruiting.recruiting_routes import recruiting
 from backend.engagement.engagement_routes import engagement
 from backend.admin.admin_routes import admin
 from backend.analytics.analytics_routes import analytics
+from backend.assets.asset_routes import assets
 
 
 def create_app():

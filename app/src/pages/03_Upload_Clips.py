@@ -1,6 +1,7 @@
 import datetime
 import streamlit as st
 import requests
+from modules.clips import normalize_clip_url
 from modules.nav import SideBarLinks
 from modules.clips import CLIP_API_URL
 
@@ -35,6 +36,7 @@ with st.form("upload_clip_form"):
                 "user_id": user_id,
                 "caption": caption,
                 "posted_at": str(posted_at),
+                "clip_url": normalize_clip_url(clip_file),
             }
 
             try:
