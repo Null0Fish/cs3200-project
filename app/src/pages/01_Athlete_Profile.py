@@ -21,6 +21,8 @@ st.write(f"### Hi, {st.session_state['first_name']}.")
 
 # get the countries from the world bank data
 
+athlete = None
+
 try:
     # Send GET request to API
     response = requests.get(API_URL)
@@ -43,6 +45,12 @@ try:
 except requests.exceptions.RequestException as e:
     st.error(f"Error connecting to the API: {str(e)}")
     st.info("Please ensure the API server is running")
+
+# Everything below prefills its widgets from the athlete's current values, so
+# there is nothing to draw without them. Stopping here leaves the error above as
+# the whole page, instead of following it with a NameError traceback.
+if athlete is None:
+    st.stop()
 
 st.subheader("Update My Metrics")
 

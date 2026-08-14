@@ -97,37 +97,46 @@ if not st.session_state.get('announcement_shown'):
 # For each of the user personas for which we are implementing
 # functionality, we put a button on the screen that the user
 # can click to MIMIC logging in as that mock user.
+#
+# One column per persona puts the three side by side instead of stacked, so
+# each button is a third of the page wide rather than the full width.
+# use_container_width fills the column, which keeps all three the same size
+# however long the label is.
+athlete_col, recruiter_col, admin_col = st.columns(3)
 
-if st.button("Act as Bethany, a High School Athlete",
-             type='primary',
-             use_container_width=True):
-    # when user clicks the button, they are now considered authenticated
-    st.session_state['authenticated'] = True
-    # we set the role of the current user
-    st.session_state['role'] = 'athlete'
-    # we add the first name of the user (so it can be displayed on
-    # subsequent pages).
-    st.session_state['first_name'] = 'Bethany'
-    st.session_state['user_id'] = 1
-    # finally, we ask streamlit to switch to another page, in this case, the
-    # landing page for this particular user type
-    logger.info("Logging in as High School Athlete Persona")
-    st.switch_page('pages/00_Athlete_Home.py')
+with athlete_col:
+    if st.button("Act as Bethany, a High School Athlete",
+                 type='primary',
+                 use_container_width=True):
+        # when user clicks the button, they are now considered authenticated
+        st.session_state['authenticated'] = True
+        # we set the role of the current user
+        st.session_state['role'] = 'athlete'
+        # we add the first name of the user (so it can be displayed on
+        # subsequent pages).
+        st.session_state['first_name'] = 'Bethany'
+        st.session_state['user_id'] = 1
+        # finally, we ask streamlit to switch to another page, in this case, the
+        # landing page for this particular user type
+        logger.info("Logging in as High School Athlete Persona")
+        st.switch_page('pages/00_Athlete_Home.py')
 
-if st.button('Act as Kevin, a College Recruiter',
-             type='primary',
-             use_container_width=True):
-    st.session_state['authenticated'] = True
-    st.session_state['role'] = 'recruiter'
-    st.session_state['first_name'] = 'Kevin'
-    st.session_state['user_id'] = 2
-    st.switch_page('pages/10_Recruiter_Home.py')
+with recruiter_col:
+    if st.button('Act as Kevin, a College Recruiter',
+                 type='primary',
+                 use_container_width=True):
+        st.session_state['authenticated'] = True
+        st.session_state['role'] = 'recruiter'
+        st.session_state['first_name'] = 'Kevin'
+        st.session_state['user_id'] = 2
+        st.switch_page('pages/10_Recruiter_Home.py')
 
-if st.button('Act as Johnathan, a System Administrator',
-             type='primary',
-             use_container_width=True):
-    st.session_state['authenticated'] = True
-    st.session_state['role'] = 'administrator'
-    st.session_state['first_name'] = 'Johnathan'
-    st.session_state['user_id'] = 3
-    st.switch_page('pages/20_Admin_Home.py')
+with admin_col:
+    if st.button('Act as Johnathan, a System Administrator',
+                 type='primary',
+                 use_container_width=True):
+        st.session_state['authenticated'] = True
+        st.session_state['role'] = 'administrator'
+        st.session_state['first_name'] = 'Johnathan'
+        st.session_state['user_id'] = 3
+        st.switch_page('pages/20_Admin_Home.py')
