@@ -20,9 +20,11 @@ which is what the seed data does.
 `http://localhost:4000/assets/clips/super_cool_clip.mp4`, which resolves to
 `api/assets/clips/super_cool_clip.mp4` on disk.
 
-The seed data in `database-files/talent_scout.sql` gives clip 1 a `clip_url` of
-`/super_cool_clip.mp4`, so dropping a file with that name here is enough to see
-a real video in the app. Clip 2 is seeded with a NULL `clip_url` and renders
-without a player.
+The seed data in `database-files/02_talent_scout_seed.sql` gives clip 1 a
+`clip_url` of `/super_cool_clip.mp4`, so dropping a file with that name here is
+enough to see a real video in the app. Clip 2 is seeded with a NULL `clip_url`
+and renders without a player. The generated clips all carry a NULL `clip_url`
+too, since their video files are not in the repository and a URL with no file
+behind it would render a broken player.
 
 Video files are deliberately not committed to the repository.
